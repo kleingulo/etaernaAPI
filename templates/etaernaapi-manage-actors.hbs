@@ -1,0 +1,18 @@
+<form>
+  <ul class="flexcol">
+    {{#each this}}
+    <li class="flexrow" data-actor-id="{{id}}">
+      <image src="{{img}}" width="128px" height="128px"></image>
+      <p>{{name}}</p>
+      <input type="checkbox" name="{{id}}.isActive" title="Mark Active" data-dtype="Boolean" {{checked isActive}} />
+      <button type="button" title="Delete Actor" data-action="delete" class="flex0">
+        <i class="fas fa-trash"></i>
+      </button>
+    </li>
+    {{/each}}
+  </ul>
+  <button type="button" data-action="create"><i class="fas fa-plus"></i> Add Actor</button>
+  <button type="submit">
+    Save
+  </button>
+</form>
