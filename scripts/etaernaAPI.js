@@ -10,6 +10,7 @@
 
 class EtaernaApi{
 	static ID = 'etaernaAPI';
+	static logging = true;
 
 	static TEMPLATES = {
 		ETAERNAAPI_MANAGE: `modules/${this.ID}/templates/etaernaapi-manage-actors.hbs`,
@@ -21,61 +22,120 @@ class EtaernaApi{
 		EtaernaApi.registerHooks();
 	}
 
+	static log(...args) {
+		if(this.logging){
+			console.log(this.ID, '|', ...args);
+		}
+	  }
+
 	static registerHooks(){
 		//Update actor
-		Hooks.on("updateActor", (Actor, system, diff) => {
+		Hooks.on("updateActor", (Actor, patch, diff) => {		
 			let actorIDs = EtaernaApiSettings.getAllActiveActorIDs();
+			EtaernaApi.log("updateActor");
 			if(actorIDs.includes(Actor._id)){
-				let endpoint = `${EtaernaApiSettings.getEndpoint()}/char/forge/${Actor._id}`;
-				
-				const xhttp = new XMLHttpRequest();
-				
-				xhttp.onload = function() {
-					console.log(this.responseText);
-					if(xhttp.status == 404){
-						xhttp.open("PUT", endpoint, true);
-						xhttp.setRequestHeader("Content-Type", "application/json");
-						xhttp.send(JSON.stringify(EtaernaApiSettings.extractData(Actor)));
-					}
+				if(patch.hasOwnProperty("system")){
+					this.patchActor(Actor, patch.system.props);
+				} else{
+					let k = Object.keys(patch)[0];
+					let v = Object.values(patch)[0];
+					this.patchActor(Actor, {[k]:v});
 				}
-				
-				xhttp.open("PATCH", endpoint, true);
-				xhttp.setRequestHeader("Content-Type", "application/json");
-				xhttp.send(JSON.stringify(system.system.props));
 			}	
 		});
 	}
 
-	static extractData(actor){
+	static extractData(Actor){
 		var data;
-		data = actor.system.props;
-		data.foundryID = actor._id;
-		data.Name = actor.name;
-		data.img = actor.img;
+		data = Actor.system.props;
+		data.foundryID = Actor._id;
+		data.name = Actor.name;
+		data.img = Actor.img;
 		return data;
+	}
+
+	static getFaehigkeit(Actor, index){
+		console.log(Actor);
+		let faehigkeit = {};
+		let props = Actor.system.props;
+		faehigkeit["Faehigkeitenfield"+index] = props["Faehigkeitenfield"+index]; 
+		faehigkeit["Attributname"+index] = props["Attributname"+index]; 
+		faehigkeit["Faehigkeitenfieldvalue"+index] = props["Faehigkeitenfieldvalue"+index]; 
+		return faehigkeit;
+	}
+
+
+	static pushActor(Actor){
+		let endpoint = `${EtaernaApiSettings.getEndpoint()}/char/forge/${Actor._id}`;	
+		const xhttp = new XMLHttpRequest();
+		EtaernaApi.log(EtaernaApi.extractData(Actor));
+
+		xhttp.onload = function() {
+			EtaernaApi.log(this.responseText);
+			if(xhttp.status == 404){
+
+			}
+		}
+
+		xhttp.open("PUT", endpoint, true);
+		xhttp.setRequestHeader("Content-Type", "application/json");
+		xhttp.send(JSON.stringify(EtaernaApi.extractData(Actor)));
+	}
+
+	static patchActor(Actor, patch){
+		let endpoint = `${EtaernaApiSettings.getEndpoint()}/char/forge/${Actor._id}`;	
+		const xhttp = new XMLHttpRequest();
+		EtaernaApi.log(patch);
+		xhttp.onload = function() {
+			EtaernaApi.log(this.responseText);
+			if(xhttp.status == 404){
+				EtaernaApi.log(EtaernaApi.extractData(Actor));
+				xhttp.open("PUT", endpoint, true);
+				xhttp.setRequestHeader("Content-Type", "application/json");
+				xhttp.send(JSON.stringify(EtaernaApi.extractData(Actor)));
+			}
+		}
+
+		let key = Object.keys(patch)[0];
+		
+		const faehigkeit = new RegExp("Faehigkeitenfield(\\d+)");
+		let match = faehigkeit.exec(key);
+		if(match){
+			patch = EtaernaApi.getFaehigkeit(Actor, match[1]);
+		}
+
+		xhttp.open("PATCH", endpoint, true);
+		xhttp.setRequestHeader("Content-Type", "application/json");
+		xhttp.send(JSON.stringify(patch));
 	}
 
 	static createActor(Actor){
 		const xhttp = new XMLHttpRequest();
 		xhttp.onload = function() {
-			console.log(this.responseText);
+			EtaernaApi.log(this.responseText);
 		}
 		xhttp.open("POST", `${EtaernaApiSettings.getEndpoint()}/char/forge/`, true);
 		xhttp.setRequestHeader("Content-Type", "application/json");
-		xhttp.send(JSON.stringify(this.extractData(Actor)));	
+		xhttp.send(JSON.stringify(this.extractData(Actor)));
+		EtaernaApi.log(EtaernaApi.extractData(Actor));
 	}
 
 	static deleteActor(ID){
 		const xhttp = new XMLHttpRequest();
 		xhttp.onload = function() {
-			console.log(this.responseText);
+			EtaernaApi.log(this.responseText);
 		}
 		xhttp.open("DELETE", `${EtaernaApiSettings.getEndpoint()}/char/forge/${ID}`, true);
 		xhttp.setRequestHeader("Content-Type", "application/json");
 		xhttp.send();
 	}
-}
 
+	static pushAllActors(){
+		for(const id of EtaernaApiSettings.getAllActiveActorIDs()){
+			EtaernaApi.pushActor(game.actors.get(id));
+		}
+	}
+}
 
 class EtaernaApiSettings{
 
@@ -88,7 +148,7 @@ class EtaernaApiSettings{
 			type: String,
 			default: "",        // can be used to set up the default structure
 			onChange: value => { // value is the new value of the setting
-				console.log(value)
+				EtaernaApi.log(value)
 			  },
 		  });
 
@@ -100,7 +160,7 @@ class EtaernaApiSettings{
 		type: String,
 		default: "https://etaernaapi.kleingulo.de/",        // can be used to set up the default structure
 		onChange: value => { // value is the new value of the setting
-			console.log(value)
+			EtaernaApi.log(value)
 		  },
 		});
 		
@@ -111,7 +171,7 @@ class EtaernaApiSettings{
 			type: Array,
 			default: [],        // can be used to set up the default structure
 			onChange: value => { // value is the new value of the setting
-				console.log(value)
+				EtaernaApi.log(value)
 			  },
 		});
 
@@ -171,7 +231,7 @@ class EtaernaApiSettings{
 			return -1;
 		}
 		let actors = this.getAllActors();
-		actors.push(this.extractActor(Actor));
+		actors.push(this.extractActorData(Actor));
 		game.settings.set(EtaernaApi.ID, 'Actors', actors);
 		return 0;
 	};
@@ -195,11 +255,10 @@ class EtaernaApiSettings{
 	}
 
 	static removeActorByID(id){
-		console.log(id);
+		EtaernaApi.log(id);
 		let actors = this.getAllActors();
 		let index = actors.findIndex(o => o.id === id);
 		if(index != -1){
-			console.log(index);
 			actors.splice(index, 1);
 			game.settings.set(EtaernaApi.ID, 'Actors', actors);
 		}
@@ -209,7 +268,7 @@ class EtaernaApiSettings{
 		game.settings.set(EtaernaApi.ID, 'Actors', []);
 	}
 
-	static extractActor(actor){
+	static extractActorData(actor){
 		const newActor = {
 			id: actor._id,
 			name: actor.name,
@@ -221,8 +280,11 @@ class EtaernaApiSettings{
 }
 
 
-// Prepare export buttons
+// Hooks
 Hooks.on('init', EtaernaApi.initialize);
+
+Hooks.on('ready', EtaernaApi.pushAllActors);
+
 
 
 class EtaernaApiManage extends FormApplication {
