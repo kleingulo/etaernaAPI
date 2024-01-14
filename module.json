@@ -7,10 +7,10 @@
 	"authors": [{
 		"name": "KleinGulo"
 	}],
-	"scripts": [
-		"scripts/etaernaAPI.js"
+	"esmodules": [
+		"esmodules/etaernaAPI.mjs"
 	],
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"compatibility": {
 		"minimum": "10",
 		"verified": "11"

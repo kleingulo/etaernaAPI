@@ -1,3 +1,6 @@
+//Import
+import {JWT} from './jwt.js'
+
 /**
  * A single ToDo in our list of Todos.
  * @typedef {Object} Actor
@@ -8,9 +11,13 @@
  */
 
 
+
+
 class EtaernaApi{
 	static ID = 'etaernaAPI';
 	static logging = true;
+
+	static jwt = null;
 
 	static TEMPLATES = {
 		ETAERNAAPI_MANAGE: `modules/${this.ID}/templates/etaernaapi-manage-actors.hbs`,
@@ -20,11 +27,12 @@ class EtaernaApi{
 	static initialize(){
 		EtaernaApiSettings.registerSettings();
 		EtaernaApi.registerHooks();
+		EtaernaApi.createJWT()
 	}
 
 	static log(...args) {
 		if(this.logging){
-			console.log(this.ID, '|', ...args);
+			console.log(this.ID, '|', this.name, ...args);
 		}
 	  }
 
@@ -32,7 +40,7 @@ class EtaernaApi{
 		//Update actor
 		Hooks.on("updateActor", (Actor, patch, diff) => {		
 			let actorIDs = EtaernaApiSettings.getAllActiveActorIDs();
-			EtaernaApi.log("updateActor");
+			console.log("updateActor");
 			if(actorIDs.includes(Actor._id)){
 				if(patch.hasOwnProperty("system")){
 					this.patchActor(Actor, patch.system.props);
@@ -55,7 +63,6 @@ class EtaernaApi{
 	}
 
 	static getFaehigkeit(Actor, index){
-		console.log(Actor);
 		let faehigkeit = {};
 		let props = Actor.system.props;
 		faehigkeit["Faehigkeitenfield"+index] = props["Faehigkeitenfield"+index]; 
@@ -64,14 +71,29 @@ class EtaernaApi{
 		return faehigkeit;
 	}
 
+	static createJWT(){
+		var jwt = new JWT();
+		
+		const header = {
+			alg: 'HS256',
+			typ: 'JWT',
+		};
+
+		var data = {
+			"realm": EtaernaApiSettings.getRealm()
+		};
+
+		var enc = new TextEncoder();
+		jwt.sign(enc.encode(JSON.stringify(header)), enc.encode(JSON.stringify(data)), EtaernaApiSettings.getApiKey()).then((ret) => {this.jwt = ret; console.log(this.jwt);});
+	}
 
 	static pushActor(Actor){
 		let endpoint = `${EtaernaApiSettings.getEndpoint()}/char/forge/${Actor._id}`;	
 		const xhttp = new XMLHttpRequest();
-		EtaernaApi.log(EtaernaApi.extractData(Actor));
+		console.log(EtaernaApi.extractData(Actor));
 
 		xhttp.onload = function() {
-			EtaernaApi.log(this.responseText);
+			console.log(this.responseText);
 			if(xhttp.status == 404){
 
 			}
@@ -79,55 +101,80 @@ class EtaernaApi{
 
 		xhttp.open("PUT", endpoint, true);
 		xhttp.setRequestHeader("Content-Type", "application/json");
+		xhttp.setRequestHeader('Authorization', 'Bearer ' + this.jwt);
 		xhttp.send(JSON.stringify(EtaernaApi.extractData(Actor)));
 	}
 
 	static patchActor(Actor, patch){
 		let endpoint = `${EtaernaApiSettings.getEndpoint()}/char/forge/${Actor._id}`;	
 		const xhttp = new XMLHttpRequest();
-		EtaernaApi.log(patch);
+		console.log(patch);
 		xhttp.onload = function() {
-			EtaernaApi.log(this.responseText);
+			console.log(this.responseText);
 			if(xhttp.status == 404){
-				EtaernaApi.log(EtaernaApi.extractData(Actor));
+				console.log(EtaernaApi.extractData(Actor));
 				xhttp.open("PUT", endpoint, true);
 				xhttp.setRequestHeader("Content-Type", "application/json");
+				xhttp.setRequestHeader('Authorization', 'Bearer ' + this.jwt);
 				xhttp.send(JSON.stringify(EtaernaApi.extractData(Actor)));
 			}
-		}
+		}.bind(this);
 
 		let key = Object.keys(patch)[0];
+		let val = Object.values(patch)[0];
 		
 		const faehigkeit = new RegExp("Faehigkeitenfield(\\d+)");
 		let match = faehigkeit.exec(key);
 		if(match){
-			patch = EtaernaApi.getFaehigkeit(Actor, match[1]);
+			if (val != '0')
+			{
+				patch = EtaernaApi.getFaehigkeit(Actor, match[1]);
+			}
 		}
 
+		const attributname = new RegExp("Attributname(\\d+)");
+		match = attributname.exec(key);
+		if(match){
+			patch = EtaernaApi.getFaehigkeit(Actor, match[1]);
+			if(patch["Faehigkeitenfield"+match[1]] == "")
+			{
+				return;
+			}
+			// if (val == '0')
+			// {
+			// 	patch = {};
+			// 	patch["Faehigkeitenfield"+match[1]] = "";
+			// }
+		}
+
+		console.log(patch);
 		xhttp.open("PATCH", endpoint, true);
 		xhttp.setRequestHeader("Content-Type", "application/json");
+		xhttp.setRequestHeader('Authorization', 'Bearer ' + this.jwt);
 		xhttp.send(JSON.stringify(patch));
 	}
 
 	static createActor(Actor){
 		const xhttp = new XMLHttpRequest();
 		xhttp.onload = function() {
-			EtaernaApi.log(this.responseText);
+			console.log(this.responseText);
 		}
 		xhttp.open("POST", `${EtaernaApiSettings.getEndpoint()}/char/forge/`, true);
 		xhttp.setRequestHeader("Content-Type", "application/json");
+		xhttp.setRequestHeader('Authorization', 'Bearer ' + this.jwt);
 		xhttp.send(JSON.stringify(this.extractData(Actor)));
-		EtaernaApi.log(EtaernaApi.extractData(Actor));
+		console.log(EtaernaApi.extractData(Actor));
 	}
 
 	static deleteActor(ID){
 		const xhttp = new XMLHttpRequest();
 		xhttp.onload = function() {
-			EtaernaApi.log(this.responseText);
+			console.log(this.responseText);
 		}
 		xhttp.open("DELETE", `${EtaernaApiSettings.getEndpoint()}/char/forge/${ID}`, true);
 		xhttp.setRequestHeader("Content-Type", "application/json");
-		xhttp.send();
+		xhttp.setRequestHeader('Authorization', 'Bearer ' + this.jwt);
+		xhttp.send("1");
 	}
 
 	static pushAllActors(){
@@ -140,6 +187,19 @@ class EtaernaApi{
 class EtaernaApiSettings{
 
 	static registerSettings(){
+		//GameName
+		game.settings.register(EtaernaApi.ID, 'Realm', {
+			name: 'REALM',
+			scope: 'world',     // "world" = sync to db, "client" = local storage
+			config: true,      // we will use the menu above to edit this setting
+			type: String,
+			default: "",        // can be used to set up the default structure
+			onChange: value => { // value is the new value of the setting
+				EtaernaApi.createJWT()
+				},
+			});
+		
+		
 		//ApiKey
 		game.settings.register(EtaernaApi.ID, 'ApiKey', {
 			name: 'API KEY',
@@ -148,7 +208,7 @@ class EtaernaApiSettings{
 			type: String,
 			default: "",        // can be used to set up the default structure
 			onChange: value => { // value is the new value of the setting
-				EtaernaApi.log(value)
+				EtaernaApi.createJWT()
 			  },
 		  });
 
@@ -160,7 +220,7 @@ class EtaernaApiSettings{
 		type: String,
 		default: "https://etaernaapi.kleingulo.de/",        // can be used to set up the default structure
 		onChange: value => { // value is the new value of the setting
-			EtaernaApi.log(value)
+			console.log(value)
 		  },
 		});
 		
@@ -171,7 +231,7 @@ class EtaernaApiSettings{
 			type: Array,
 			default: [],        // can be used to set up the default structure
 			onChange: value => { // value is the new value of the setting
-				EtaernaApi.log(value)
+				console.log(value)
 			  },
 		});
 
@@ -184,6 +244,15 @@ class EtaernaApiSettings{
 			restricted: true                   // Restrict this submenu to gamemaster only?
 		});
 		
+	};
+
+
+	static getRealm() {
+		return game.settings.get(EtaernaApi.ID, 'Realm');
+	};
+
+	static setRealm(Name) {
+		game.settings.set(EtaernaApi.ID,'Realm', Name);
 	};
 
 	static getApiKey() {
@@ -255,7 +324,7 @@ class EtaernaApiSettings{
 	}
 
 	static removeActorByID(id){
-		EtaernaApi.log(id);
+		console.log(id);
 		let actors = this.getAllActors();
 		let index = actors.findIndex(o => o.id === id);
 		if(index != -1){
