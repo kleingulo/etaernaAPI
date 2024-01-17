@@ -3,14 +3,14 @@
 	"title": "etaernaAPI synch module",
 	"description": "A simple module to synch the actors with the etaernaAPI.",
 	"manifest": "https://github.com/kleingulo/etaernaAPI/releases/download/Module/module.json",
-	"download": "https://github.com/kleingulo/etaernaAPI/archive/refs/tags/V1.1.0.zip",
+	"download": "https://github.com/kleingulo/etaernaAPI/archive/refs/tags/V1.1.1.zip",
 	"authors": [{
 		"name": "KleinGulo"
 	}],
 	"esmodules": [
 		"esmodules/etaernaAPI.mjs"
 	],
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"compatibility": {
 		"minimum": "10",
 		"verified": "11"
