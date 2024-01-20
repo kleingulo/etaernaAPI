@@ -10,9 +10,6 @@ import {JWT} from './jwt.js'
  * @property {string} img - The image path.
  */
 
-
-
-
 class EtaernaApi{
 	static ID = 'etaernaAPI';
 	static logging = true;
@@ -65,10 +62,40 @@ class EtaernaApi{
 	static getFaehigkeit(Actor, index){
 		let faehigkeit = {};
 		let props = Actor.system.props;
-		faehigkeit["Faehigkeitenfield"+index] = props["Faehigkeitenfield"+index]; 
-		faehigkeit["Attributname"+index] = props["Attributname"+index]; 
-		faehigkeit["Faehigkeitenfieldvalue"+index] = props["Faehigkeitenfieldvalue"+index]; 
-		return faehigkeit;
+		faehigkeit["slot"] = index;
+		faehigkeit["name"] = props["Faehigkeitenfield"+index]; 
+		faehigkeit["attribut"] = props["Attributname"+index]; 
+		faehigkeit["wert"] = props["Faehigkeitenfieldvalue"+index]; 
+		return {"faehigkeit":faehigkeit};
+	}
+
+	static getItem(Actor, index){
+		let item = {};
+		let props = Actor.system.props;
+		item["slot"] = index;
+		item["name"] = props["ItemTextfield"+index];
+		item["anzahl"] = props["ItemItemTextfieldNumber"+index];
+		return {"item":item};
+	}
+
+	static getZauber(Actor, index){
+		let zauber = {};
+		let props = Actor.system.props;
+		zauber["slot"] = index;
+		zauber["mp"] = props["MP"+index];
+		zauber["effekt"] = props["Effekt"+index];
+		zauber["wuerfel"] = props["Wuerfel"+index];
+		zauber["element"] = props["Element"+index];
+		if(index > 14) {
+			zauber["name"] = props["Eskalation"+(index-14)]
+		}
+		else if (index > 10) {
+			zauber["name"] = props["Beschwoerung"+(index-10)]
+		}
+		else {
+			zauber["name"] = props["Zauber"+index]
+		}
+		return {"zauber":zauber};
 	}
 
 	static createJWT(){
@@ -106,7 +133,7 @@ class EtaernaApi{
 	}
 
 	static patchActor(Actor, patch){
-		let endpoint = `${EtaernaApiSettings.getEndpoint()}/char/forge/${Actor._id}`;	
+		let endpoint = `${EtaernaApiSettings.getEndpoint()}/char/forge/${Actor._id}`;
 		const xhttp = new XMLHttpRequest();
 		console.log(patch);
 		xhttp.onload = function() {
@@ -123,30 +150,124 @@ class EtaernaApi{
 		let key = Object.keys(patch)[0];
 		let val = Object.values(patch)[0];
 		
-		const faehigkeit = new RegExp("Faehigkeitenfield(\\d+)");
-		let match = faehigkeit.exec(key);
+		const Faehigkeitenfield = new RegExp("Faehigkeitenfield(\\d+)");
+		let match = Faehigkeitenfield.exec(key);
 		if(match){
 			if (val != '0')
 			{
 				patch = EtaernaApi.getFaehigkeit(Actor, match[1]);
 			}
 		}
-
-		const attributname = new RegExp("Attributname(\\d+)");
-		match = attributname.exec(key);
-		if(match){
-			patch = EtaernaApi.getFaehigkeit(Actor, match[1]);
-			if(patch["Faehigkeitenfield"+match[1]] == "")
-			{
-				return;
+		if(!match){
+			const Attributname = new RegExp("Attributname(\\d+)");
+			match = Attributname.exec(key);
+			if(match){
+				patch = EtaernaApi.getFaehigkeit(Actor, match[1]);
+				if(patch["name"] == "")
+				{
+					return;
+				}
 			}
-			// if (val == '0')
-			// {
-			// 	patch = {};
-			// 	patch["Faehigkeitenfield"+match[1]] = "";
-			// }
+		}
+		if(!match){
+			const Faehigkeitenfieldvalue = new RegExp("Faehigkeitenfieldvalue(\\d+)");
+			match = Faehigkeitenfieldvalue.exec(key);
+			if(match){
+				patch = EtaernaApi.getFaehigkeit(Actor, match[1]);
+				if(patch["faehigkeit"]["name"] == "")
+				{
+					return;
+				}
+			}
+		}
+		if(!match){
+			const ItemTextfield = new RegExp("ItemTextfield(\\d+)");
+			match = ItemTextfield.exec(key);
+			if(match){
+				patch = EtaernaApi.getItem(Actor, match[1]);
+			}
+		}
+		if(!match){
+			const ItemItemTextfieldNumber = new RegExp("ItemItemTextfieldNumber(\\d+)");
+			match = ItemItemTextfieldNumber.exec(key);
+			if(match){
+				patch = EtaernaApi.getItem(Actor, match[1]);
+				if(patch["item"]["name"] == "")
+				{
+					return;
+				}
+			}
 		}
 
+		if(!match){
+			const Zauber = new RegExp("Zauber(\\d+)");			
+			match = Zauber.exec(key);
+			if(match){
+				patch = EtaernaApi.getZauber(Actor, match[1]);
+			}
+		}
+		if(!match){
+			const Beschwoerung = new RegExp("Beschwoerung(\\d+)");
+			match = Beschwoerung.exec(key);
+			if(match){
+				patch = EtaernaApi.getZauber(Actor, parseInt(match[1])+10);
+			}
+		}
+		if(!match){
+			const Eskalation = new RegExp("Eskalation(\\d+)");
+			match = Eskalation.exec(key);
+			if(match){
+				patch = EtaernaApi.getZauber(Actor, parseInt(match[1])+14);
+			}
+		}
+		if(!match){
+			const mp = new RegExp("MP(\\d+)");
+			match = mp.exec(key);
+			if(match){
+				patch = EtaernaApi.getZauber(Actor, match[1]);
+				if(patch["zauber"]["name"] == "")
+				{
+					return;
+				}
+			}
+		}
+		if(!match){
+			const Effekt = new RegExp("Effekt(\\d+)");
+			match = Effekt.exec(key);
+			console.log("10");
+			if(match){
+				patch = EtaernaApi.getZauber(Actor, match[1]);
+				if(patch["zauber"]["name"] == "")
+				{
+					return;
+				}
+			}
+		}
+		if(!match){
+			const Wuerfel = new RegExp("Wuerfel(\\d+)");
+			match = Wuerfel.exec(key);
+			console.log("11");
+			if(match){
+				patch = EtaernaApi.getZauber(Actor, match[1]);
+				if(patch["zauber"]["name"] == "")
+				{
+					return;
+				}
+			}
+		}
+		if(!match){
+			const Element = new RegExp("Element(\\d+)");
+			match = Element.exec(key);
+			console.log("12");
+			if(match){
+				patch = EtaernaApi.getZauber(Actor, match[1]);
+				if(patch["zauber"]["name"] == "")
+				{
+					return;
+				}
+			}
+		}
+		console.log(endpoint);
 		console.log(patch);
 		xhttp.open("PATCH", endpoint, true);
 		xhttp.setRequestHeader("Content-Type", "application/json");
@@ -448,3 +569,4 @@ class EtaernaApiAdd extends FormApplication {
 		this.parent.render();
 	}
 }
+window.etaernaapi = { EtaernaApi: EtaernaApi }
