@@ -12,7 +12,7 @@ import {JWT} from './jwt.js'
 
 class EtaernaApi{
 	static ID = 'etaernaAPI';
-	static logging = true;
+	static logging = false;
 
 	static jwt = null;
 
@@ -37,7 +37,7 @@ class EtaernaApi{
 		//Update actor
 		Hooks.on("updateActor", (Actor, patch, diff) => {		
 			let actorIDs = EtaernaApiSettings.getAllActiveActorIDs();
-			console.log("updateActor");
+			EtaernaApi.log("updateActor");
 			if(actorIDs.includes(Actor._id)){
 				if(patch.hasOwnProperty("system")){
 					this.patchActor(Actor, patch.system.props);
@@ -111,16 +111,16 @@ class EtaernaApi{
 		};
 
 		var enc = new TextEncoder();
-		jwt.sign(enc.encode(JSON.stringify(header)), enc.encode(JSON.stringify(data)), EtaernaApiSettings.getApiKey()).then((ret) => {this.jwt = ret; console.log(this.jwt);});
+		jwt.sign(enc.encode(JSON.stringify(header)), enc.encode(JSON.stringify(data)), EtaernaApiSettings.getApiKey()).then((ret) => {this.jwt = ret; EtaernaApi.log(this.jwt);});
 	}
 
 	static pushActor(Actor){
 		let endpoint = `${EtaernaApiSettings.getEndpoint()}/char/forge/${Actor._id}`;	
 		const xhttp = new XMLHttpRequest();
-		console.log(EtaernaApi.extractData(Actor));
+		EtaernaApi.log(EtaernaApi.extractData(Actor));
 
 		xhttp.onload = function() {
-			console.log(this.responseText);
+			EtaernaApi.log(this.responseText);
 			if(xhttp.status == 404){
 
 			}
@@ -135,11 +135,11 @@ class EtaernaApi{
 	static patchActor(Actor, patch){
 		let endpoint = `${EtaernaApiSettings.getEndpoint()}/char/forge/${Actor._id}`;
 		const xhttp = new XMLHttpRequest();
-		console.log(patch);
+		EtaernaApi.log(patch);
 		xhttp.onload = function() {
-			console.log(this.responseText);
+			EtaernaApi.log(this.responseText);
 			if(xhttp.status == 404){
-				console.log(EtaernaApi.extractData(Actor));
+				EtaernaApi.log(EtaernaApi.extractData(Actor));
 				xhttp.open("PUT", endpoint, true);
 				xhttp.setRequestHeader("Content-Type", "application/json");
 				xhttp.setRequestHeader('Authorization', 'Bearer ' + this.jwt);
@@ -234,7 +234,7 @@ class EtaernaApi{
 		if(!match){
 			const Effekt = new RegExp("Effekt(\\d+)");
 			match = Effekt.exec(key);
-			console.log("10");
+			EtaernaApi.log("10");
 			if(match){
 				patch = EtaernaApi.getZauber(Actor, match[1]);
 				if(patch["zauber"]["name"] == "")
@@ -246,7 +246,7 @@ class EtaernaApi{
 		if(!match){
 			const Wuerfel = new RegExp("Wuerfel(\\d+)");
 			match = Wuerfel.exec(key);
-			console.log("11");
+			EtaernaApi.log("11");
 			if(match){
 				patch = EtaernaApi.getZauber(Actor, match[1]);
 				if(patch["zauber"]["name"] == "")
@@ -258,7 +258,7 @@ class EtaernaApi{
 		if(!match){
 			const Element = new RegExp("Element(\\d+)");
 			match = Element.exec(key);
-			console.log("12");
+			EtaernaApi.log("12");
 			if(match){
 				patch = EtaernaApi.getZauber(Actor, match[1]);
 				if(patch["zauber"]["name"] == "")
@@ -267,8 +267,8 @@ class EtaernaApi{
 				}
 			}
 		}
-		console.log(endpoint);
-		console.log(patch);
+		EtaernaApi.log(endpoint);
+		EtaernaApi.log(patch);
 		xhttp.open("PATCH", endpoint, true);
 		xhttp.setRequestHeader("Content-Type", "application/json");
 		xhttp.setRequestHeader('Authorization', 'Bearer ' + this.jwt);
@@ -278,19 +278,19 @@ class EtaernaApi{
 	static createActor(Actor){
 		const xhttp = new XMLHttpRequest();
 		xhttp.onload = function() {
-			console.log(this.responseText);
+			EtaernaApi.log(this.responseText);
 		}
 		xhttp.open("POST", `${EtaernaApiSettings.getEndpoint()}/char/forge/`, true);
 		xhttp.setRequestHeader("Content-Type", "application/json");
 		xhttp.setRequestHeader('Authorization', 'Bearer ' + this.jwt);
 		xhttp.send(JSON.stringify(this.extractData(Actor)));
-		console.log(EtaernaApi.extractData(Actor));
+		EtaernaApi.log(EtaernaApi.extractData(Actor));
 	}
 
 	static deleteActor(ID){
 		const xhttp = new XMLHttpRequest();
 		xhttp.onload = function() {
-			console.log(this.responseText);
+			EtaernaApi.log(this.responseText);
 		}
 		xhttp.open("DELETE", `${EtaernaApiSettings.getEndpoint()}/char/forge/${ID}`, true);
 		xhttp.setRequestHeader("Content-Type", "application/json");
@@ -341,7 +341,7 @@ class EtaernaApiSettings{
 		type: String,
 		default: "https://etaernaapi.kleingulo.de/",        // can be used to set up the default structure
 		onChange: value => { // value is the new value of the setting
-			console.log(value)
+			EtaernaApi.log(value)
 		  },
 		});
 		
@@ -352,7 +352,7 @@ class EtaernaApiSettings{
 			type: Array,
 			default: [],        // can be used to set up the default structure
 			onChange: value => { // value is the new value of the setting
-				console.log(value)
+				EtaernaApi.log(value)
 			  },
 		});
 
@@ -445,7 +445,7 @@ class EtaernaApiSettings{
 	}
 
 	static removeActorByID(id){
-		console.log(id);
+		EtaernaApi.log(id);
 		let actors = this.getAllActors();
 		let index = actors.findIndex(o => o.id === id);
 		if(index != -1){
